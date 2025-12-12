@@ -364,24 +364,48 @@ function buildAngularLines(pos, gst, opts) {
 }
 function buildAscDscCurve(pos, gst, angle, opts) {
   const step = opts.samplingStepDeg ?? 2;
-  const coords = [];
+  const allPoints = [];
   const altOffset = opts.refractAscDsc ? degToRad(-0.5667) : 0;
   for (let lon = -180; lon <= 180; lon += step) {
     const lst = normalizeHour(gst + lon / 15);
     const H = degToRad((lst - pos.ra) * 15);
     const decRad = degToRad(pos.dec);
-    let latRad = Math.atan2(-Math.cos(H) * Math.cos(decRad), Math.sin(decRad));
+    const tanLat = -Math.cos(decRad) * Math.cos(H) / Math.sin(decRad);
+    let latRad = Math.atan(tanLat);
+    const sinAlt = Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(H);
+    if (Math.abs(sinAlt) > 0.1) {
+      latRad = latRad > 0 ? latRad - Math.PI : latRad + Math.PI;
+    }
     if (opts.refractAscDsc) {
       latRad = solveLatitudeForAltitude(decRad, H, altOffset, latRad);
     }
     let lat = radToDeg(latRad);
     lat = clampLat(lat);
-    const isAsc = Math.sin(H) < 0;
-    if (angle === "ASC" && isAsc || angle === "DSC" && !isAsc) {
-      coords.push({ lat, lon: normalizeLon(lon) });
-    }
+    allPoints.push({ lat, lon: normalizeLon(lon), H });
   }
-  coords.sort((a, b) => a.lon - b.lon);
+  const wantSign = angle === "ASC" ? -1 : 1;
+  const filtered = allPoints.filter((pt) => {
+    const currentSign = Math.sin(pt.H) < 0 ? -1 : 1;
+    return currentSign === wantSign;
+  });
+  const segments = [];
+  let currentSegment = [];
+  for (let i = 0; i < filtered.length; i++) {
+    const pt = filtered[i];
+    if (currentSegment.length > 0) {
+      const prev = currentSegment[currentSegment.length - 1];
+      const lonJump = Math.abs(pt.lon - prev.lon);
+      if (lonJump > 180) {
+        segments.push(currentSegment);
+        currentSegment = [];
+      }
+    }
+    currentSegment.push({ lat: pt.lat, lon: pt.lon });
+  }
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+  const coords = segments.length > 0 ? segments.reduce((a, b) => a.length > b.length ? a : b, []) : [];
   return {
     kind: angle,
     body: pos.body,
@@ -409,30 +433,15 @@ function solveLatitudeForAltitude(decRad, H, targetAlt, initialLat) {
   return lat;
 }
 function segmentsIntersect(a1, a2, b1, b2) {
-  const samples = 20;
-  let minDist = Infinity;
-  let bestPoint = null;
-  for (let i = 0; i <= samples; i++) {
-    const t = i / samples;
-    const pA = {
+  const det = (a2.lon - a1.lon) * (b2.lat - b1.lat) - (a2.lat - a1.lat) * (b2.lon - b1.lon);
+  if (Math.abs(det) < 1e-12) return null;
+  const t = ((b1.lat - a1.lat) * (b2.lon - b1.lon) - (b1.lon - a1.lon) * (b2.lat - b1.lat)) / det;
+  const u = ((b1.lat - a1.lat) * (a2.lon - a1.lon) - (b1.lon - a1.lon) * (a2.lat - a1.lat)) / det;
+  if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+    return {
       lat: a1.lat + t * (a2.lat - a1.lat),
       lon: a1.lon + t * (a2.lon - a1.lon)
     };
-    for (let j = 0; j <= samples; j++) {
-      const u = j / samples;
-      const pB = {
-        lat: b1.lat + u * (b2.lat - b1.lat),
-        lon: b1.lon + u * (b2.lon - b1.lon)
-      };
-      const d = haversineKm(pA, pB);
-      if (d < minDist) {
-        minDist = d;
-        bestPoint = { lat: (pA.lat + pB.lat) / 2, lon: (pA.lon + pB.lon) / 2 };
-      }
-    }
-  }
-  if (minDist < 10) {
-    return bestPoint;
   }
   return null;
 }
@@ -453,6 +462,11 @@ function findCrossings(lines) {
           if (p) {
             const classification = Math.abs(p.lat) > 85 ? "pseudo" : "real";
             crossings.push({ at: p, lines: [l1, l2], classification });
+          } else {
+            const d = haversineKm(l1.coordinates[s1], l2.coordinates[s2]);
+            if (d < 50) {
+              crossings.push({ at: l1.coordinates[s1], lines: [l1, l2], classification: "pseudo" });
+            }
           }
         }
       }

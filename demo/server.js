@@ -23,7 +23,7 @@ app.post('/api/compute', (req, res) => {
     const opts = {
       system: 'tropical',
       angularOrbDeg: 1,
-      samplingStepDeg: 1,
+      samplingStepDeg: 0.5,
       geoOrbKm: 300,
       cache: true,
       ...options,

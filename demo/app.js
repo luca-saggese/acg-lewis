@@ -53,7 +53,7 @@ form.addEventListener('submit', async (e) => {
     options: {
       system: data.get('system'),
       angularOrbDeg: Number(data.get('orb')),
-      samplingStepDeg: 1,
+      samplingStepDeg: 0.5,
       geoOrbKm: 300,
       cache: false,
     },
@@ -124,9 +124,11 @@ function renderCrossings(crossings) {
       fillOpacity: 0.7,
     }).addTo(map);
     const [l1, l2] = c.lines || [];
+    const latStr = c.at.lat.toFixed(2);
+    const lonStr = c.at.lon.toFixed(2);
     const label = l1 && l2
-      ? `${lineLabel(l1)} × ${lineLabel(l2)} (${c.classification})`
-      : `Crossing (${c.classification})`;
+      ? `${lineLabel(l1)} × ${lineLabel(l2)} (${c.classification})<br>${latStr}, ${lonStr}`
+      : `Crossing (${c.classification})<br>${latStr}, ${lonStr}`;
     m.bindTooltip(label, { sticky: true, opacity: 0.9 });
     overlays.push(m);
   });

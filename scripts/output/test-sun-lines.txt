@@ -1,0 +1,46 @@
+Sun ACG Lines Test (1974-8-12 9:0)
+
+Total lines: 4
+Sun lines: 4
+
+ASC Line:
+  Points: 180
+  First 10 points:
+    [0] lat=74.93 lon=-103.00
+    [1] lat=74.93 lon=-102.00
+    [2] lat=74.92 lon=-101.00
+    [3] lat=74.90 lon=-100.00
+    [4] lat=74.88 lon=-99.00
+    [5] lat=74.86 lon=-98.00
+    [6] lat=74.83 lon=-97.00
+    [7] lat=74.80 lon=-96.00
+    [8] lat=74.77 lon=-95.00
+    [9] lat=74.72 lon=-94.00
+  Last 10 points:
+    [170] lat=-74.74 lon=67.00
+    [171] lat=-74.78 lon=68.00
+    [172] lat=-74.82 lon=69.00
+    [173] lat=-74.85 lon=70.00
+    [174] lat=-74.87 lon=71.00
+    [175] lat=-74.89 lon=72.00
+    [176] lat=-74.91 lon=73.00
+    [177] lat=-74.92 lon=74.00
+    [178] lat=-74.93 lon=75.00
+    [179] lat=-74.93 lon=76.00
+  Max coordinate jump: 3.71 degrees
+
+DSC Line:
+  Points: 103
+  First 10 points:
+    [0] lat=-74.93 lon=77.00
+    [1] lat=-74.93 lon=78.00
+    [2] lat=-74.92 lon=79.00
+    [3] lat=-74.90 lon=80.00
+    [4] lat=-74.88 lon=81.00
+    [5] lat=-74.86 lon=82.00
+    [6] lat=-74.83 lon=83.00
+    [7] lat=-74.80 lon=84.00
+    [8] lat=-74.77 lon=85.00
+    [9] lat=-74.72 lon=86.00
+  Max coordinate jump: 3.71 degrees
+
