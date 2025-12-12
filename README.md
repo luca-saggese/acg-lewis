@@ -2,6 +2,8 @@
 
 Astronomically-correct Astro*Carto*Graphy calculations (Jim Lewis style) using Swiss Ephemeris. Map-agnostic: only structured data outputs (JSON, GeoJSON-ready).
 
+![Demo map](docs/demo.png)
+
 ## Features
 - Swiss Ephemeris (equatorial, topocentric, true positions) with tropical/sidereal (ayanamsa selectable)
 - Core outputs: RA/DEC, ecliptic lon/lat, distance, GST/LST
