@@ -1,6 +1,7 @@
 import type { ACGLinesResult, Angle, Body, CalculationOptions, CoordinateLine, Crossing, Location } from './types';
 import { attachLst, computeBodyPosition, normalizeDateTime, siderealTimes, toJulianDayUTC } from './ephemeris';
 import { clampLat, normalizeDeg, normalizeLon, normalizeHour, toGeoJSONLineString, radToDeg, degToRad, haversineKm } from './utils';
+import { date } from 'zod';
 
 const VERSION = '0.1.0';
 
@@ -29,7 +30,7 @@ export function computeACG(
     lines.push(...buildAngularLines(pos, gst, opts));
   }
 
-  const crossings = findCrossings(lines);
+  const crossings =  findCrossings(lines);
 
   return {
     timestamp: new Date().toISOString(),
@@ -71,7 +72,6 @@ function buildAngularLines(pos: { ra: number; dec: number; body: Body }, gst: nu
       { lat: -89.999, lon: icLon },
     ]),
   };
-
   const ascLine = buildAscDscCurve(pos, gst, 'ASC', opts);
   const dscLine = buildAscDscCurve(pos, gst, 'DSC', opts);
 
@@ -176,38 +176,16 @@ function solveLatitudeForAltitude(decRad: number, H: number, targetAlt: number, 
   }
   return lat;
 }
-
 function segmentsIntersect(a1: { lat: number; lon: number }, a2: { lat: number; lon: number }, b1: { lat: number; lon: number }, b2: { lat: number; lon: number }) {
-  // Sample both segments densely to find closest approach
-  const samples = 20;
-  let minDist = Infinity;
-  let bestPt: { lat: number; lon: number } | null = null;
-  
-  for (let i = 0; i <= samples; i++) {
-    const t = i / samples;
-    const ptA = {
+  const det = (a2.lon - a1.lon) * (b2.lat - b1.lat) - (a2.lat - a1.lat) * (b2.lon - b1.lon);
+  if (Math.abs(det) < 1e-12) return null;
+  const t = ((b1.lat - a1.lat) * (b2.lon - b1.lon) - (b1.lon - a1.lon) * (b2.lat - b1.lat)) / det;
+  const u = ((b1.lat - a1.lat) * (a2.lon - a1.lon) - (b1.lon - a1.lon) * (a2.lat - a1.lat)) / det;
+  if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+    return {
       lat: a1.lat + t * (a2.lat - a1.lat),
       lon: a1.lon + t * (a2.lon - a1.lon),
     };
-    
-    for (let j = 0; j <= samples; j++) {
-      const u = j / samples;
-      const ptB = {
-        lat: b1.lat + u * (b2.lat - b1.lat),
-        lon: b1.lon + u * (b2.lon - b1.lon),
-      };
-      
-      const d = haversineKm(ptA, ptB);
-      if (d < minDist) {
-        minDist = d;
-        bestPt = { lat: (ptA.lat + ptB.lat) / 2, lon: (ptA.lon + ptB.lon) / 2 };
-      }
-    }
-  }
-  
-  // Accept if segments come within 50 km
-  if (minDist < 50) {
-    return bestPt;
   }
   return null;
 }
@@ -259,8 +237,11 @@ function findCrossings(lines: CoordinateLine[]): Crossing[] {
           if (meridianLon >= lonMin && meridianLon <= lonMax) {
             const t = (meridianLon - p1.lon) / (p2.lon - p1.lon);
             const lat = p1.lat + t * (p2.lat - p1.lat);
-            const classification: 'real' | 'pseudo' = Math.abs(lat) > 85 ? 'pseudo' : 'real';
-            crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            // Skip polar crossings
+            if (Math.abs(lat) < 85) {
+              const classification: 'real' | 'pseudo' = Math.abs(lat) > 75 ? 'pseudo' : 'real';
+              crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            }
             break;
           }
         }
@@ -274,8 +255,8 @@ function findCrossings(lines: CoordinateLine[]): Crossing[] {
               l2.coordinates[s2],
               l2.coordinates[s2 + 1],
             );
-            if (p) {
-              const classification: 'real' | 'pseudo' = Math.abs(p.lat) > 85 ? 'pseudo' : 'real';
+            if (p && Math.abs(p.lat) < 85) {
+              const classification: 'real' | 'pseudo' = Math.abs(p.lat) > 75 ? 'pseudo' : 'real';
               crossings.push({ at: p, lines: [l1, l2], classification });
             }
           }
@@ -283,5 +264,5 @@ function findCrossings(lines: CoordinateLine[]): Crossing[] {
       }
     }
   }
-  return crossings;
+  return crossings.filter(p=> p.at.lat > -89.9 && p.at.lat < 89.9);
 }

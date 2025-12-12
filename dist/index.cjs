@@ -433,30 +433,15 @@ function solveLatitudeForAltitude(decRad, H, targetAlt, initialLat) {
   return lat;
 }
 function segmentsIntersect(a1, a2, b1, b2) {
-  const samples = 20;
-  let minDist = Infinity;
-  let bestPt = null;
-  for (let i = 0; i <= samples; i++) {
-    const t = i / samples;
-    const ptA = {
+  const det = (a2.lon - a1.lon) * (b2.lat - b1.lat) - (a2.lat - a1.lat) * (b2.lon - b1.lon);
+  if (Math.abs(det) < 1e-12) return null;
+  const t = ((b1.lat - a1.lat) * (b2.lon - b1.lon) - (b1.lon - a1.lon) * (b2.lat - b1.lat)) / det;
+  const u = ((b1.lat - a1.lat) * (a2.lon - a1.lon) - (b1.lon - a1.lon) * (a2.lat - a1.lat)) / det;
+  if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+    return {
       lat: a1.lat + t * (a2.lat - a1.lat),
       lon: a1.lon + t * (a2.lon - a1.lon)
     };
-    for (let j = 0; j <= samples; j++) {
-      const u = j / samples;
-      const ptB = {
-        lat: b1.lat + u * (b2.lat - b1.lat),
-        lon: b1.lon + u * (b2.lon - b1.lon)
-      };
-      const d = haversineKm(ptA, ptB);
-      if (d < minDist) {
-        minDist = d;
-        bestPt = { lat: (ptA.lat + ptB.lat) / 2, lon: (ptA.lon + ptB.lon) / 2 };
-      }
-    }
-  }
-  if (minDist < 50) {
-    return bestPt;
   }
   return null;
 }
@@ -476,8 +461,10 @@ function findCrossings(lines) {
           if (meridianLon >= lonMin && meridianLon <= lonMax) {
             const t = (meridianLon - p1.lon) / (p2.lon - p1.lon);
             const lat = p1.lat + t * (p2.lat - p1.lat);
-            const classification = Math.abs(lat) > 85 ? "pseudo" : "real";
-            crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            if (Math.abs(lat) < 85) {
+              const classification = Math.abs(lat) > 75 ? "pseudo" : "real";
+              crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            }
             break;
           }
         }
@@ -491,8 +478,10 @@ function findCrossings(lines) {
           if (meridianLon >= lonMin && meridianLon <= lonMax) {
             const t = (meridianLon - p1.lon) / (p2.lon - p1.lon);
             const lat = p1.lat + t * (p2.lat - p1.lat);
-            const classification = Math.abs(lat) > 85 ? "pseudo" : "real";
-            crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            if (Math.abs(lat) < 85) {
+              const classification = Math.abs(lat) > 75 ? "pseudo" : "real";
+              crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            }
             break;
           }
         }
@@ -505,8 +494,8 @@ function findCrossings(lines) {
               l2.coordinates[s2],
               l2.coordinates[s2 + 1]
             );
-            if (p) {
-              const classification = Math.abs(p.lat) > 85 ? "pseudo" : "real";
+            if (p && Math.abs(p.lat) < 85) {
+              const classification = Math.abs(p.lat) > 75 ? "pseudo" : "real";
               crossings.push({ at: p, lines: [l1, l2], classification });
             }
           }
@@ -514,7 +503,7 @@ function findCrossings(lines) {
       }
     }
   }
-  return crossings;
+  return crossings.filter((p) => p.at.lat > -89.9 && p.at.lat < 89.9);
 }
 
 // src/parans.ts

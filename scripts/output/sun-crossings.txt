@@ -1,5 +1,4 @@
 Sun Crossings Test
 
-Total crossings: 1
+Total crossings: 0
 
-[0] MC × IC at (90.00, -13.73) - pseudo

@@ -23,16 +23,26 @@ app.post('/api/compute', (req, res) => {
     const opts = {
       system: 'tropical',
       angularOrbDeg: 1,
-      samplingStepDeg: 0.5,
+      samplingStepDeg: 2,
       geoOrbKm: 300,
       cache: true,
       ...options,
     };
+    let start = Date.now();
     const acg = computeACG(datetime, opts, bodies, location);
+    console.log(`Computed ACG in ${Date.now() - start} ms`);
+    start = Date.now();
     const parans = computeParans(datetime, opts, bodies, 2);
+    console.log(`Computed Parans in ${Date.now() - start} ms`);
+    start = Date.now();
     const ls = computeLocalSpace(datetime, location, opts, bodies);
+    console.log(`Computed Local Space in ${Date.now() - start} ms`);
+    start = Date.now();
     const relocation = computeRelocationChart(datetime, location, opts);
+    console.log(`Computed Relocation Chart in ${Date.now() - start} ms`);
+    start = Date.now();
     const analysis = analyzeLocation(location, radiusKm ?? 500, acg, parans.parans, opts);
+    console.log(`Computed Location Analysis in ${Date.now() - start} ms`);
     res.json({ acg, parans, localSpace: ls, relocation, analysis });
   } catch (err) {
     console.error(err);
