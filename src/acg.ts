@@ -237,8 +237,11 @@ function findCrossings(lines: CoordinateLine[]): Crossing[] {
             // Interpolate latitude at this longitude
             const t = (meridianLon - p1.lon) / (p2.lon - p1.lon);
             const lat = p1.lat + t * (p2.lat - p1.lat);
-            const classification: 'real' | 'pseudo' = Math.abs(lat) > 85 ? 'pseudo' : 'real';
-            crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            // Skip polar crossings (lat > 85° or < -85°)
+            if (Math.abs(lat) < 85) {
+              const classification: 'real' | 'pseudo' = Math.abs(lat) > 75 ? 'pseudo' : 'real';
+              crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            }
             break; // Only one crossing per segment pair
           }
         }
