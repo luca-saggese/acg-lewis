@@ -409,15 +409,30 @@ function solveLatitudeForAltitude(decRad, H, targetAlt, initialLat) {
   return lat;
 }
 function segmentsIntersect(a1, a2, b1, b2) {
-  const det = (a2.lon - a1.lon) * (b2.lat - b1.lat) - (a2.lat - a1.lat) * (b2.lon - b1.lon);
-  if (Math.abs(det) < 1e-12) return null;
-  const t = ((b1.lat - a1.lat) * (b2.lon - b1.lon) - (b1.lon - a1.lon) * (b2.lat - b1.lat)) / det;
-  const u = ((b1.lat - a1.lat) * (a2.lon - a1.lon) - (b1.lon - a1.lon) * (a2.lat - a1.lat)) / det;
-  if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-    return {
+  const samples = 20;
+  let minDist = Infinity;
+  let bestPoint = null;
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const pA = {
       lat: a1.lat + t * (a2.lat - a1.lat),
       lon: a1.lon + t * (a2.lon - a1.lon)
     };
+    for (let j = 0; j <= samples; j++) {
+      const u = j / samples;
+      const pB = {
+        lat: b1.lat + u * (b2.lat - b1.lat),
+        lon: b1.lon + u * (b2.lon - b1.lon)
+      };
+      const d = haversineKm(pA, pB);
+      if (d < minDist) {
+        minDist = d;
+        bestPoint = { lat: (pA.lat + pB.lat) / 2, lon: (pA.lon + pB.lon) / 2 };
+      }
+    }
+  }
+  if (minDist < 10) {
+    return bestPoint;
   }
   return null;
 }
@@ -438,11 +453,6 @@ function findCrossings(lines) {
           if (p) {
             const classification = Math.abs(p.lat) > 85 ? "pseudo" : "real";
             crossings.push({ at: p, lines: [l1, l2], classification });
-          } else {
-            const d = haversineKm(l1.coordinates[s1], l2.coordinates[s2]);
-            if (d < 50) {
-              crossings.push({ at: l1.coordinates[s1], lines: [l1, l2], classification: "pseudo" });
-            }
           }
         }
       }
