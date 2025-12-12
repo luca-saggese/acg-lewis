@@ -178,40 +178,102 @@ function solveLatitudeForAltitude(decRad: number, H: number, targetAlt: number, 
 }
 
 function segmentsIntersect(a1: { lat: number; lon: number }, a2: { lat: number; lon: number }, b1: { lat: number; lon: number }, b2: { lat: number; lon: number }) {
-  const det = (a2.lon - a1.lon) * (b2.lat - b1.lat) - (a2.lat - a1.lat) * (b2.lon - b1.lon);
-  if (Math.abs(det) < 1e-12) return null;
-  const t = ((b1.lat - a1.lat) * (b2.lon - b1.lon) - (b1.lon - a1.lon) * (b2.lat - b1.lat)) / det;
-  const u = ((b1.lat - a1.lat) * (a2.lon - a1.lon) - (b1.lon - a1.lon) * (a2.lat - a1.lat)) / det;
-  if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-    return {
+  // Sample both segments densely to find closest approach
+  const samples = 20;
+  let minDist = Infinity;
+  let bestPt: { lat: number; lon: number } | null = null;
+  
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const ptA = {
       lat: a1.lat + t * (a2.lat - a1.lat),
       lon: a1.lon + t * (a2.lon - a1.lon),
     };
+    
+    for (let j = 0; j <= samples; j++) {
+      const u = j / samples;
+      const ptB = {
+        lat: b1.lat + u * (b2.lat - b1.lat),
+        lon: b1.lon + u * (b2.lon - b1.lon),
+      };
+      
+      const d = haversineKm(ptA, ptB);
+      if (d < minDist) {
+        minDist = d;
+        bestPt = { lat: (ptA.lat + ptB.lat) / 2, lon: (ptA.lon + ptB.lon) / 2 };
+      }
+    }
+  }
+  
+  // Accept if segments come within 50 km
+  if (minDist < 50) {
+    return bestPt;
   }
   return null;
 }
 
 function findCrossings(lines: CoordinateLine[]): Crossing[] {
   const crossings: Crossing[] = [];
+  
   for (let i = 0; i < lines.length; i++) {
     for (let j = i + 1; j < lines.length; j++) {
       const l1 = lines[i];
       const l2 = lines[j];
-      for (let s1 = 0; s1 < l1.coordinates.length - 1; s1++) {
-        for (let s2 = 0; s2 < l2.coordinates.length - 1; s2++) {
-          const p = segmentsIntersect(
-            l1.coordinates[s1],
-            l1.coordinates[s1 + 1],
-            l2.coordinates[s2],
-            l2.coordinates[s2 + 1],
-          );
-          if (p) {
-            const classification: 'real' | 'pseudo' = Math.abs(p.lat) > 85 ? 'pseudo' : 'real';
-            crossings.push({ at: p, lines: [l1, l2], classification });
-          } else {
-            const d = haversineKm(l1.coordinates[s1], l2.coordinates[s2]);
-            if (d < 50) {
-              crossings.push({ at: l1.coordinates[s1], lines: [l1, l2], classification: 'pseudo' });
+      
+      // Special case: MC/IC (vertical lines) crossing ASC/DSC (curves)
+      if ((l1.kind === 'MC' || l1.kind === 'IC') && (l2.kind === 'ASC' || l2.kind === 'DSC')) {
+        const meridianLon = l1.coordinates[0].lon; // MC/IC have constant lon
+        
+        // Find point on ASC/DSC curve at this longitude
+        for (let k = 0; k < l2.coordinates.length - 1; k++) {
+          const p1 = l2.coordinates[k];
+          const p2 = l2.coordinates[k + 1];
+          
+          // Check if meridian lon is between p1.lon and p2.lon
+          const lonMin = Math.min(p1.lon, p2.lon);
+          const lonMax = Math.max(p1.lon, p2.lon);
+          
+          if (meridianLon >= lonMin && meridianLon <= lonMax) {
+            // Interpolate latitude at this longitude
+            const t = (meridianLon - p1.lon) / (p2.lon - p1.lon);
+            const lat = p1.lat + t * (p2.lat - p1.lat);
+            const classification: 'real' | 'pseudo' = Math.abs(lat) > 85 ? 'pseudo' : 'real';
+            crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            break; // Only one crossing per segment pair
+          }
+        }
+      } else if ((l2.kind === 'MC' || l2.kind === 'IC') && (l1.kind === 'ASC' || l1.kind === 'DSC')) {
+        // Symmetric case
+        const meridianLon = l2.coordinates[0].lon;
+        
+        for (let k = 0; k < l1.coordinates.length - 1; k++) {
+          const p1 = l1.coordinates[k];
+          const p2 = l1.coordinates[k + 1];
+          
+          const lonMin = Math.min(p1.lon, p2.lon);
+          const lonMax = Math.max(p1.lon, p2.lon);
+          
+          if (meridianLon >= lonMin && meridianLon <= lonMax) {
+            const t = (meridianLon - p1.lon) / (p2.lon - p1.lon);
+            const lat = p1.lat + t * (p2.lat - p1.lat);
+            const classification: 'real' | 'pseudo' = Math.abs(lat) > 85 ? 'pseudo' : 'real';
+            crossings.push({ at: { lat, lon: meridianLon }, lines: [l1, l2], classification });
+            break;
+          }
+        }
+      } else {
+        // General case: curve × curve
+        for (let s1 = 0; s1 < l1.coordinates.length - 1; s1++) {
+          for (let s2 = 0; s2 < l2.coordinates.length - 1; s2++) {
+            const p = segmentsIntersect(
+              l1.coordinates[s1],
+              l1.coordinates[s1 + 1],
+              l2.coordinates[s2],
+              l2.coordinates[s2 + 1],
+            );
+            if (p) {
+              const classification: 'real' | 'pseudo' = Math.abs(p.lat) > 85 ? 'pseudo' : 'real';
+              crossings.push({ at: p, lines: [l1, l2], classification });
             }
           }
         }
