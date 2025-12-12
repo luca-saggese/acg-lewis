@@ -79,7 +79,7 @@ function buildAngularLines(pos: { ra: number; dec: number; body: Body }, gst: nu
 }
 
 function buildAscDscCurve(pos: { ra: number; dec: number; body: Body }, gst: number, angle: Angle, opts: CalculationOptions): CoordinateLine {
-  const step = opts.samplingStepDeg ?? 2; // degrees in longitude
+  const step = opts.samplingStepDeg ?? 1; // degrees in longitude
   const coords = [] as { lat: number; lon: number }[];
   const altOffset = opts.refractAscDsc ? degToRad(-0.5667) : 0; // approximate refraction at horizon
   for (let lon = -180; lon <= 180; lon += step) {
@@ -131,26 +131,49 @@ function solveLatitudeForAltitude(decRad: number, H: number, targetAlt: number, 
   return lat;
 }
 
-function segmentsIntersect(a1: { lat: number; lon: number }, a2: { lat: number; lon: number }, b1: { lat: number; lon: number }, b2: { lat: number; lon: number }) {
-  // Sample both segments densely and find closest approach
+function findClosestApproach(
+  a1: { lat: number; lon: number },
+  a2: { lat: number; lon: number },
+  b1: { lat: number; lon: number },
+  b2: { lat: number; lon: number }
+): { distance: number; point: { lat: number; lon: number } } | null {
+  // Quick endpoint check
+  const maxEndpointDist = Math.max(
+    haversineKm(a1, b1), haversineKm(a1, b2),
+    haversineKm(a2, b1), haversineKm(a2, b2)
+  );
+  if (maxEndpointDist < 50) {
+    // segments are very close, skip detailed check
+    const midA = { lat: (a1.lat + a2.lat) / 2, lon: (a1.lon + a2.lon) / 2 };
+    const midB = { lat: (b1.lat + b2.lat) / 2, lon: (b1.lon + b2.lon) / 2 };
+    return { distance: haversineKm(midA, midB), point: { lat: (midA.lat + midB.lat) / 2, lon: (midA.lon + midB.lon) / 2 } };
+  }
+
+  const minEndpointDist = Math.min(
+    haversineKm(a1, b1), haversineKm(a1, b2),
+    haversineKm(a2, b1), haversineKm(a2, b2)
+  );
+  if (minEndpointDist > 300) return null; // too far to intersect
+
+  // Sample to find closest approach
   const samples = 20;
   let minDist = Infinity;
   let bestPoint: { lat: number; lon: number } | null = null;
-  
+
   for (let i = 0; i <= samples; i++) {
     const t = i / samples;
     const pA = {
       lat: a1.lat + t * (a2.lat - a1.lat),
       lon: a1.lon + t * (a2.lon - a1.lon),
     };
-    
+
     for (let j = 0; j <= samples; j++) {
       const u = j / samples;
       const pB = {
         lat: b1.lat + u * (b2.lat - b1.lat),
         lon: b1.lon + u * (b2.lon - b1.lon),
       };
-      
+
       const d = haversineKm(pA, pB);
       if (d < minDist) {
         minDist = d;
@@ -158,35 +181,78 @@ function segmentsIntersect(a1: { lat: number; lon: number }, a2: { lat: number; 
       }
     }
   }
-  
-  // Consider it a crossing if closest approach is < 10 km
-  if (minDist < 10) {
-    return bestPoint;
+
+  if (minDist < 30 && bestPoint) {
+    return { distance: minDist, point: bestPoint };
   }
   return null;
 }
 
 function findCrossings(lines: CoordinateLine[]): Crossing[] {
-  const crossings: Crossing[] = [];
+  const rawCrossings: Array<{ at: { lat: number; lon: number }; lines: [CoordinateLine, CoordinateLine]; distance: number }> = [];
+
+  // Find all pairwise close approaches
   for (let i = 0; i < lines.length; i++) {
     for (let j = i + 1; j < lines.length; j++) {
       const l1 = lines[i];
       const l2 = lines[j];
       for (let s1 = 0; s1 < l1.coordinates.length - 1; s1++) {
         for (let s2 = 0; s2 < l2.coordinates.length - 1; s2++) {
-          const p = segmentsIntersect(
+          const result = findClosestApproach(
             l1.coordinates[s1],
             l1.coordinates[s1 + 1],
             l2.coordinates[s2],
             l2.coordinates[s2 + 1],
           );
-          if (p) {
-            const classification: 'real' | 'pseudo' = Math.abs(p.lat) > 85 ? 'pseudo' : 'real';
-            crossings.push({ at: p, lines: [l1, l2], classification });
+          if (result && result.distance < 10) {
+            rawCrossings.push({ at: result.point, lines: [l1, l2], distance: result.distance });
           }
         }
       }
     }
   }
-  return crossings;
+
+  // Deduplicate: merge crossings within 20 km
+  const merged: Crossing[] = [];
+  const used = new Set<number>();
+
+  for (let i = 0; i < rawCrossings.length; i++) {
+    if (used.has(i)) continue;
+    const cluster = [rawCrossings[i]];
+    used.add(i);
+
+    for (let j = i + 1; j < rawCrossings.length; j++) {
+      if (used.has(j)) continue;
+      if (haversineKm(rawCrossings[i].at, rawCrossings[j].at) < 20) {
+        cluster.push(rawCrossings[j]);
+        used.add(j);
+      }
+    }
+
+    // Average position
+    const avgLat = cluster.reduce((sum, c) => sum + c.at.lat, 0) / cluster.length;
+    const avgLon = cluster.reduce((sum, c) => sum + c.at.lon, 0) / cluster.length;
+    const at = { lat: avgLat, lon: avgLon };
+
+    // Collect unique lines
+    const uniqueLines = new Map<string, CoordinateLine>();
+    cluster.forEach((c) => {
+      const key1 = `${c.lines[0].body}-${c.lines[0].kind}`;
+      const key2 = `${c.lines[1].body}-${c.lines[1].kind}`;
+      uniqueLines.set(key1, c.lines[0]);
+      uniqueLines.set(key2, c.lines[1]);
+    });
+
+    const allLines = Array.from(uniqueLines.values());
+    const classification: 'real' | 'pseudo' = Math.abs(at.lat) > 85 ? 'pseudo' : 'real';
+
+    // Store first two lines for backwards compatibility
+    merged.push({
+      at,
+      lines: [allLines[0], allLines[1]],
+      classification,
+    });
+  }
+
+  return merged;
 }
