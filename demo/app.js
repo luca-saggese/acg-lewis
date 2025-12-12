@@ -9,6 +9,19 @@ const statusEl = document.getElementById('status');
 const form = document.getElementById('natal-form');
 let overlays = [];
 
+function bodyLabel(body) {
+  if (!body) return 'unknown';
+  if (typeof body === 'string') return body.replace(/_/g, ' ');
+  const base = body.name ? body.name : `asteroid ${body.asteroid}`;
+  return base;
+}
+
+function lineLabel(line) {
+  const who = bodyLabel(line.body);
+  const kind = line.kind === 'LOCAL_SPACE' ? 'Local Space' : line.kind;
+  return `${who} — ${kind}`;
+}
+
 function clearOverlays() {
   overlays.forEach((o) => map.removeLayer(o));
   overlays = [];
@@ -75,6 +88,7 @@ function renderACG(acg) {
       .map((c) => [c.lat, c.lon]);
     if (latlngs.length < 2) return;
     const poly = L.polyline(latlngs, { color: colorByKind(line.kind), weight: 2, opacity: 0.8 }).addTo(map);
+    poly.bindTooltip(lineLabel(line), { sticky: true, opacity: 0.9 });
     overlays.push(poly);
   });
 }
@@ -88,10 +102,14 @@ function renderLocalSpace(ls) {
       .map((c) => [c.lat, c.lon]);
     if (latlngs.length < 2) return;
     const poly = L.polyline(latlngs, { color: '#eab308', weight: 1, dashArray: '4,2', opacity: 0.8 }).addTo(map);
+    const bearing = Number.isFinite(line.bearing) ? `${Math.round(line.bearing)}°` : '';
+    const label = `${bodyLabel(line.body)} — Local Space${bearing ? ` (${bearing})` : ''}`;
+    poly.bindTooltip(label, { sticky: true, opacity: 0.9 });
     overlays.push(poly);
   });
   if (ls?.origin && Number.isFinite(ls.origin.lat) && Number.isFinite(ls.origin.lon)) {
     const marker = L.marker([ls.origin.lat, ls.origin.lon]).addTo(map);
+    marker.bindTooltip('Luogo natale', { direction: 'top', sticky: true, opacity: 0.9 });
     overlays.push(marker);
   }
 }
@@ -105,6 +123,11 @@ function renderCrossings(crossings) {
       weight: 2,
       fillOpacity: 0.7,
     }).addTo(map);
+    const [l1, l2] = c.lines || [];
+    const label = l1 && l2
+      ? `${lineLabel(l1)} × ${lineLabel(l2)} (${c.classification})`
+      : `Crossing (${c.classification})`;
+    m.bindTooltip(label, { sticky: true, opacity: 0.9 });
     overlays.push(m);
   });
 }

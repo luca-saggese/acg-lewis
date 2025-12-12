@@ -59,3 +59,17 @@ button {
   font-size: 0.85rem;
   line-height: 1.4;
 }
+.legend .swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.legend .mc { background: #22c55e; }
+.legend .ic { background: #14b8a6; }
+.legend .asc { background: #3b82f6; }
+.legend .dsc { background: #ef4444; }
+.legend .ls { background: #eab308; }
+.legend .cross { background: linear-gradient(90deg, #f97316 0%, #a855f7 100%); }
