@@ -1,0 +1,59 @@
+{
+  "name": "acg-lewis",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Astronomically-correct Astro*Carto*Graphy (Jim Lewis-style) computation library (map-agnostic).",
+  "keywords": [
+    "astrology",
+    "astrocartography",
+    "swiss-ephemeris",
+    "ephemeris",
+    "geodesy"
+  ],
+  "license": "ISC",
+  "author": "",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "demo": "npm run build && node demo/server.js"
+  },
+  "dependencies": {
+    "luxon": "^3.5.0",
+    "swisseph": "^0.5.17",
+    "zod": "^3.24.1",
+    "express": "^4.21.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/luxon": "^3.4.2",
+    "eslint": "^9.17.0",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "typescript": "^5.7.2",
+    "tsup": "^8.3.5",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

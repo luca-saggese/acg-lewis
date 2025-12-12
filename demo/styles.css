@@ -1,0 +1,61 @@
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+#map {
+  flex: 1;
+}
+.panel {
+  width: 320px;
+  padding: 16px;
+  background: #0f172a;
+  color: #e2e8f0;
+  overflow-y: auto;
+}
+.panel h1 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+.row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+label {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+input, select, button {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #1f2937;
+  background: #0b1221;
+  color: #e2e8f0;
+}
+button {
+  margin-top: 6px;
+  cursor: pointer;
+  background: linear-gradient(120deg, #22c55e, #06b6d4);
+  border: none;
+  color: #0b1221;
+  font-weight: 700;
+}
+#status {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  color: #a5b4fc;
+}
+.legend {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
