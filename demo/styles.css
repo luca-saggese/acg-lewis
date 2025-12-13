@@ -67,9 +67,12 @@ button {
   margin-right: 6px;
   vertical-align: middle;
 }
-.legend .mc { background: #22c55e; }
-.legend .ic { background: #14b8a6; }
-.legend .asc { background: #3b82f6; }
-.legend .dsc { background: #ef4444; }
+.legend .sun { background: #fbbf24; }
+.legend .moon { background: #a3a3a3; }
+.legend .mercury { background: #8b5cf6; }
+.legend .venus { background: #ec4899; }
+.legend .mars { background: #ef4444; }
+.legend .jupiter { background: #f97316; }
+.legend .saturn { background: #0ea5e9; }
 .legend .ls { background: #eab308; }
 .legend .cross { background: linear-gradient(90deg, #f97316 0%, #a855f7 100%); }

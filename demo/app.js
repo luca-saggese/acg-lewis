@@ -27,15 +27,23 @@ function clearOverlays() {
   overlays = [];
 }
 
-function colorByKind(kind) {
-  switch (kind) {
-    case 'MC': return '#22c55e';
-    case 'IC': return '#14b8a6';
-    case 'ASC': return '#3b82f6';
-    case 'DSC': return '#ef4444';
-    case 'LOCAL_SPACE': return '#eab308';
-    default: return '#c084fc';
+function colorByBody(body) {
+  if (typeof body === 'string') {
+    switch (body) {
+      case 'sun': return '#fbbf24';
+      case 'moon': return '#a3a3a3';
+      case 'mercury': return '#8b5cf6';
+      case 'venus': return '#ec4899';
+      case 'mars': return '#ef4444';
+      case 'jupiter': return '#f97316';
+      case 'saturn': return '#0ea5e9';
+      case 'uranus': return '#06b6d4';
+      case 'neptune': return '#3b82f6';
+      case 'pluto': return '#6366f1';
+      default: return '#22c55e';
+    }
   }
+  return '#c084fc';
 }
 
 form.addEventListener('submit', async (e) => {
@@ -87,7 +95,7 @@ function renderACG(acg) {
       .filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lon))
       .map((c) => [c.lat, c.lon]);
     if (latlngs.length < 2) return;
-    const poly = L.polyline(latlngs, { color: colorByKind(line.kind), weight: 2, opacity: 0.8 }).addTo(map);
+    const poly = L.polyline(latlngs, { color: colorByBody(line.body), weight: 2, opacity: 0.8 }).addTo(map);
     poly.bindTooltip(lineLabel(line), { sticky: true, opacity: 0.9 });
     overlays.push(poly);
   });
