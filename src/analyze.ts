@@ -24,7 +24,7 @@ export function analyzeLocation(
 
   for (const line of acg.lines) {
     const closest = minDistanceToLine(city, line.coordinates);
-    if (closest <= radiusKm) {
+    if (closest <= radiusKm || radiusKm === -1) {
       const strength = classifyStrength(closest, geoOrb);
       const force = Math.exp(-closest / geoOrb);
       active.push({ body: line.body, angle: line.kind as Angle, distanceKm: closest, strength, force });
@@ -34,7 +34,7 @@ export function analyzeLocation(
   const ranking = [...active].sort(
     (a, b) => compositeWeight(b) - compositeWeight(a),
   );
-  const paransInArea = parans.filter((p) => Math.abs(p.latitude - city.lat) <= radiusKm / 111);
+  const paransInArea = radiusKm === -1 ? parans : parans.filter((p) => Math.abs(p.latitude - city.lat) <= radiusKm / 111);
 
   return { city, radiusKm, active, parans: paransInArea, ranking, version: VERSION };
 }

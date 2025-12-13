@@ -41,6 +41,44 @@ const analysis = analyzeLocation({ lat: 40, lon: -3, alt: 0 }, 500, acg, parans.
 // ACGLinesResultSchema.parse(acg);
 ```
 
+## API Reference
+
+### `computeACG(datetime, options, bodies, baseLocation?)`
+Calcola le linee AstroCartoGraphy (MC, IC, ASC, DSC) per i corpi specificati.
+- **Input**: data/ora, opzioni di calcolo, elenco corpi celesti, luogo natale opzionale
+- **Output**: oggetto con `lines` (coordinate geografiche dove ciascun corpo è angolare), `crossings` (incroci tra linee), `bodies` (posizioni calcolate), `gst` (tempo siderale)
+- **Uso**: mappa globale delle linee angolari; base per tutte le altre analisi
+
+### `computeParans(datetime, options, bodies, maxOrbDeg)`
+Trova i parans (simultanea angularità di due corpi su angoli diversi alla stessa latitudine).
+- **Input**: data/ora, opzioni, corpi, orb massimo in gradi
+- **Output**: array di `Paran` con latitudine, coppia corpi, coppia angoli, orb residuo
+- **Uso**: identifica latitudini dove due pianeti sono simultaneamente angolari (es. Sole su ASC e Luna su MC)
+
+### `computeLocalSpace(datetime, location, options, bodies)`
+Genera linee Local Space (grande cerchio dal luogo natale nella direzione azimutale di ciascun corpo).
+- **Input**: data/ora, luogo di origine, opzioni, corpi
+- **Output**: `origin` (luogo natale), `lines` (coordinate del grande cerchio per ogni corpo con `bearing`)
+- **Uso**: mostra direzioni cardinali dal luogo di nascita verso ciascun pianeta
+
+### `computeRelocationChart(datetime, location, options)`
+Calcola gli angoli (ASC/MC/IC/DSC) e le case per un luogo di rilocazione.
+- **Input**: data/ora, luogo di destinazione, opzioni
+- **Output**: `angles` (ASC, MC, IC, DSC, vertex, equasc), `houses` (cuspidi per sistemi Placidus, Koch, Equal, Whole Sign)
+- **Uso**: carta astrologica rilocata per analisi locale
+
+### `analyzeLocation(city, radiusKm, acg, parans, options)`
+Analizza quali linee ACG e parans sono attivi entro un raggio da una città.
+- **Input**: coordinate città, raggio di ricerca (km), risultato ACG, parans, opzioni
+- **Output**: `active` (linee entro raggio con distanza, strength, force), `parans` (parans nella fascia di latitudine), `ranking` (linee ordinate per peso composito)
+- **Uso**: valuta l'influenza astro-geografica di un luogo specifico; classifica le linee per rilevanza
+
+### `initEphemeris(path?)`
+Inizializza Swiss Ephemeris con il percorso dei file effemeridi.
+- **Input**: path opzionale alla directory `.se1`
+- **Output**: void
+- **Uso**: chiamare prima di qualsiasi calcolo se si usano effemeridi custom
+
 ## Options
 - `system`: `tropical` | `sidereal`
 - `ayanamsa`: one of Lahiri/Krishnamurti/Raman/Fagan Bradley/Yukteshwar/True Citra/User
