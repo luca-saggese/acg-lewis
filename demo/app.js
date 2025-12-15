@@ -19,7 +19,7 @@ function bodyLabel(body) {
 function lineLabel(line) {
   const who = bodyLabel(line.body);
   const kind = line.kind === 'LOCAL_SPACE' ? 'Local Space' : line.kind;
-  return `${who} — ${kind}`;
+  return `${who} — ${kind} ${(kind === 'MC' || kind === 'IC') ? `(${Math.round(line.coordinates[0].lon * 100)/100}°)` : 'dd'}`;
 }
 
 function clearOverlays() {

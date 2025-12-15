@@ -1,6 +1,6 @@
 {
   "name": "acg-lewis",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Astronomically-correct Astro*Carto*Graphy (Jim Lewis-style) computation library (map-agnostic).",
   "keywords": [

@@ -50,6 +50,7 @@ button {
 }
 .legend {
   position: absolute;
+  display: none;
   bottom: 12px;
   left: 12px;
   background: rgba(15, 23, 42, 0.9);

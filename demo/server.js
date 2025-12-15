@@ -31,6 +31,8 @@ app.post('/api/compute', (req, res) => {
     let start = Date.now();
     const acg = computeACG(datetime, opts, bodies, location);
     console.log(`Computed ACG in ${Date.now() - start} ms`);
+    console.log({datetime, opts, bodies, location})
+    console.log(JSON.stringify(acg.lines[0],null,4))
     start = Date.now();
     const parans = computeParans(datetime, opts, bodies, 2);
     console.log(`Computed Parans in ${Date.now() - start} ms`);
